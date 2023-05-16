@@ -55,4 +55,9 @@ if __name__ == "__main__":
         long_description_content_type="text/markdown",
         packages=find_packages(),
         install_requires=load_requirements(),
+        entry_points={
+            "console_scripts": [
+                "sightsee=sightsee:main",
+            ],
+        },
     )
