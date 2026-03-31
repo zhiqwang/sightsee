@@ -1,8 +1,57 @@
-[tool.usort]
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
 
+[project]
+name = "sightsee"
+version = "0.2.0a0"
+description = "Model viewer wrapper around Netron."
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "netron",
+]
+authors = [
+    { name = "Zhiqiang Wang", email = "zhiqwang@foxmail.com" },
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[project.urls]
+Homepage = "https://github.com/zhiqwang/sightsee"
+Repository = "https://github.com/zhiqwang/sightsee"
+
+[project.scripts]
+sightsee = "sightsee:main"
+
+[dependency-groups]
+dev = [
+    "onnx>=1.14,<2",
+    "pytest>=8,<9",
+]
+
+[tool.setuptools]
+include-package-data = true
+zip-safe = false
+
+[tool.setuptools.packages.find]
+include = ["sightsee*"]
+
+[tool.usort]
 first_party_detection = false
 
 [tool.black]
-
 line-length = 120
-target-version = ["py39"]
+target-version = ["py310"]
