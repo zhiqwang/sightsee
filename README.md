@@ -24,8 +24,8 @@ One-time setup:
 Release flow:
 
 ```bash
-git tag v0.2.0a0
-git push origin v0.2.0a0
+git tag v0.1.0
+git push origin v0.1.0
 ```
 
 Pushing a `v*` tag, or publishing a GitHub release from a tag, runs tests, builds the wheel and sdist, checks that the
