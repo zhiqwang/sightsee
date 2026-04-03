@@ -91,13 +91,26 @@ jobs:
         with:
           name: python-package-distributions
           path: dist/
+      - name: Validate publishing secrets
+        env:
+          TEST_PYPI_API_TOKEN: ${{ secrets.TEST_PYPI_API_TOKEN }}
+          PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          test -n "$TEST_PYPI_API_TOKEN" || {
+            echo "Missing GitHub secret: TEST_PYPI_API_TOKEN"
+            exit 1
+          }
+          test -n "$PYPI_API_TOKEN" || {
+            echo "Missing GitHub secret: PYPI_API_TOKEN"
+            exit 1
+          }
       - name: Publish distribution 📦 to Test PyPI
         if: startsWith(github.event.ref, 'refs/tags') || github.event_name == 'release'
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           user: __token__
           password: ${{ secrets.TEST_PYPI_API_TOKEN }}
-          repository_url: https://test.pypi.org/legacy/
+          repository-url: https://test.pypi.org/legacy/
           verbose: true
       - name: Publish distribution 📦 to PyPI
         if: startsWith(github.event.ref, 'refs/tags') || github.event_name == 'release'
