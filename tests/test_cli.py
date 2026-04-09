@@ -1,5 +1,4 @@
 import argparse
-import time
 import unittest.mock
 
 import pytest
@@ -135,7 +134,10 @@ def test_detect_default_host_returns_none_when_all_fail(monkeypatch):
     monkeypatch.delenv("SIGHTSEE_HOST", raising=False)
     monkeypatch.setattr(sightsee.socket, "socket", lambda *a, **kw: BrokenSocket())
     monkeypatch.setattr(sightsee.socket, "gethostname", lambda: "host")
-    monkeypatch.setattr(sightsee.socket, "gethostbyname", lambda h: (_ for _ in ()).throw(OSError("no dns")))
+    def _raise_oserror(h):
+        raise OSError("no dns")
+
+    monkeypatch.setattr(sightsee.socket, "gethostbyname", _raise_oserror)
     assert sightsee._detect_default_host() is None
 
 
@@ -340,7 +342,10 @@ def test_build_start_kwargs_handles_uninspectable_function(monkeypatch):
 
     # Force inspect.signature to raise TypeError
     original_signature = sightsee.inspect.signature
-    monkeypatch.setattr(sightsee.inspect, "signature", lambda fn: (_ for _ in ()).throw(TypeError("no sig")))
+    def _raise_typeerror(fn):
+        raise TypeError("no sig")
+
+    monkeypatch.setattr(sightsee.inspect, "signature", _raise_typeerror)
     result = sightsee._build_start_kwargs(dummy_start, browse=False, verbosity="debug")
     assert result == {"browse": False}
 
