@@ -326,7 +326,7 @@ def test_build_address_with_host_and_port():
 
 
 def test_build_start_kwargs_returns_early_when_verbosity_is_none():
-    """When verbosity is None, return only browse without inspecting the function (covers line 64)."""
+    """When verbosity is None, return only browse without inspecting the function."""
 
     def any_start(file=None, address=None, browse=True, verbosity="default"):
         pass
@@ -335,13 +335,11 @@ def test_build_start_kwargs_returns_early_when_verbosity_is_none():
 
 
 def test_build_start_kwargs_handles_uninspectable_function(monkeypatch):
-    """When signature inspection fails, verbosity is silently dropped (covers lines 68-69)."""
+    """When signature inspection fails, verbosity is silently dropped."""
 
     def dummy_start():
         pass
 
-    # Force inspect.signature to raise TypeError
-    original_signature = sightsee.inspect.signature
     def _raise_typeerror(fn):
         raise TypeError("no sig")
 
@@ -366,7 +364,7 @@ def test_resolve_host_with_explicit_host():
 
 
 def test_format_access_url_wraps_ipv6_in_brackets():
-    """IPv6 addresses containing ':' should be wrapped in brackets (covers line 119)."""
+    """IPv6 addresses containing ':' should be wrapped in brackets."""
     assert sightsee._format_access_url(("fe80::1", 8080)) == "http://[fe80::1]:8080"
 
 
@@ -393,7 +391,7 @@ def test_format_access_url_double_colon_host_uses_fallback():
 
 
 def test_start_model_without_identifier_delegates_to_start(monkeypatch):
-    """When identifier is None, _start_model delegates to netron's start (covers lines 84-86)."""
+    """When identifier is None, _start_model delegates to netron's start."""
     captured = {}
 
     def fake_start(file, address=None, **kwargs):
@@ -410,7 +408,7 @@ def test_start_model_without_identifier_delegates_to_start(monkeypatch):
 
 
 def test_start_model_with_identifier_starts_custom_server(tmp_path, write_test_model, monkeypatch):
-    """When identifier is provided, _start_model uses the custom ContentProvider path (covers lines 88-111)."""
+    """When identifier is provided, _start_model uses the custom ContentProvider path."""
     model_path = write_test_model(tmp_path / "model.plan")
 
     fake_content = unittest.mock.MagicMock()
@@ -442,7 +440,7 @@ def test_start_model_with_identifier_starts_custom_server(tmp_path, write_test_m
 
 
 def test_start_model_with_identifier_and_browse(tmp_path, write_test_model, monkeypatch):
-    """When browse=True and identifier is set, webbrowser.open is called (covers line 108-109)."""
+    """When browse=True and identifier is set, webbrowser.open is called."""
     model_path = write_test_model(tmp_path / "model.plan")
 
     monkeypatch.setattr(sightsee.netron_server, "_ContentProvider", lambda *args: unittest.mock.MagicMock())
@@ -464,7 +462,7 @@ def test_start_model_with_identifier_and_browse(tmp_path, write_test_model, monk
 
 
 def test_start_model_with_identifier_nonzero_port_calls_stop(tmp_path, write_test_model, monkeypatch):
-    """When address has a non-zero port, netron_server.stop is called (covers lines 98-99)."""
+    """When address has a non-zero port, netron_server.stop is called."""
     model_path = write_test_model(tmp_path / "model.plan")
 
     monkeypatch.setattr(sightsee.netron_server, "_ContentProvider", lambda *args: unittest.mock.MagicMock())
@@ -486,7 +484,7 @@ def test_start_model_with_identifier_nonzero_port_calls_stop(tmp_path, write_tes
 
 
 def test_start_model_with_identifier_raises_on_missing_file(tmp_path):
-    """When identifier is set but file doesn't exist, FileNotFoundError is raised (covers lines 91-92)."""
+    """When identifier is set but file doesn't exist, FileNotFoundError is raised."""
     missing = str(tmp_path / "nonexistent.plan")
     with pytest.raises(FileNotFoundError):
         sightsee._start_model(file=missing, identifier="model.onnx")
@@ -496,7 +494,7 @@ def test_start_model_with_identifier_raises_on_missing_file(tmp_path):
 
 
 def test_main_prints_version(monkeypatch, capsys):
-    """--version flag prints version and exits with code 0 (covers lines 150-151)."""
+    """--version flag prints version and exits with code 0."""
     monkeypatch.setattr(
         sightsee.argparse.ArgumentParser,
         "parse_args",
@@ -523,7 +521,7 @@ def test_main_prints_version(monkeypatch, capsys):
 
 
 def test_main_module_entry_point():
-    """Running `python -m sightsee` calls main() (covers __main__.py line 5)."""
+    """Running `python -m sightsee` calls main()."""
     import runpy
 
     with unittest.mock.patch("sightsee.main") as mock_main:
