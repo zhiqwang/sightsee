@@ -122,7 +122,7 @@ def test_detect_default_host_returns_none_on_loopback(monkeypatch):
 
 
 def test_detect_default_host_returns_none_when_all_fail(monkeypatch):
-    """Both UDP probe and hostname lookup raise OSError → returns None (covers lines 43-44)."""
+    """Returns None when both the UDP probe and hostname lookup raise OSError."""
 
     class BrokenSocket:
         def connect(self, address):
