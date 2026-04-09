@@ -48,4 +48,8 @@ uv run sightsee --browse path/to/model.onnx
 uv run sightsee --host auto path/to/model.onnx
 uv run sightsee --host 0.0.0.0 --port 8080 path/to/model.onnx
 SIGHTSEE_HOST=10.10.0.5 uv run sightsee path/to/model.onnx
+uv run sightsee --as-onnx path/to/model.plan
 ```
+
+`--as-onnx` keeps the original file path for loading, but forces Netron to treat the input as an ONNX model. This is
+useful when the model is ONNX-compatible but does not use a `.onnx` suffix.

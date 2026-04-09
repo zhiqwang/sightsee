@@ -5,6 +5,14 @@ import pytest
 import sightsee
 
 
+def test_build_onnx_identifier_replaces_existing_suffix():
+    assert sightsee._build_onnx_identifier("/tmp/model.plan") == "model.onnx"
+
+
+def test_build_onnx_identifier_appends_suffix_when_missing():
+    assert sightsee._build_onnx_identifier("/tmp/model") == "model.onnx"
+
+
 def test_detect_default_host_uses_env_override(monkeypatch):
     monkeypatch.setenv("SIGHTSEE_HOST", "10.0.0.9")
     assert sightsee._detect_default_host() == "10.0.0.9"
@@ -105,10 +113,12 @@ def test_main_uses_generated_model_path_with_auto_host(tmp_path, write_test_mode
     model_path = write_test_model(tmp_path / "test_model.onnx")
     calls = {}
 
-    def fake_start(file=None, address=None, browse=True):
+    def fake_start_model(file=None, address=None, browse=True, verbosity=None, identifier=None):
         calls["file"] = file
         calls["address"] = address
         calls["browse"] = browse
+        calls["verbosity"] = verbosity
+        calls["identifier"] = identifier
         return ("10.10.10.20", 8080)
 
     monkeypatch.setattr(
@@ -120,11 +130,12 @@ def test_main_uses_generated_model_path_with_auto_host(tmp_path, write_test_mode
             port=None,
             host=sightsee.AUTO_HOST,
             verbosity=None,
+            as_onnx=False,
             version=False,
         ),
     )
     monkeypatch.setattr(sightsee, "_detect_default_host", lambda: "10.10.10.20")
-    monkeypatch.setattr(sightsee, "start", fake_start)
+    monkeypatch.setattr(sightsee, "_start_model", fake_start_model)
     monkeypatch.setattr(sightsee, "wait", lambda: None)
 
     with pytest.raises(SystemExit) as exc_info:
@@ -135,6 +146,8 @@ def test_main_uses_generated_model_path_with_auto_host(tmp_path, write_test_mode
         "file": model_path,
         "address": ("10.10.10.20", None),
         "browse": False,
+        "verbosity": None,
+        "identifier": None,
     }
     assert capsys.readouterr().out.strip() == "Access URL: http://10.10.10.20:8080"
 
@@ -151,6 +164,7 @@ def test_main_rejects_missing_model(tmp_path, monkeypatch, capsys):
             port=None,
             host=sightsee.AUTO_HOST,
             verbosity=None,
+            as_onnx=False,
             version=False,
         ),
     )
@@ -161,3 +175,67 @@ def test_main_rejects_missing_model(tmp_path, monkeypatch, capsys):
 
     assert exc_info.value.code == 2
     assert capsys.readouterr().out.strip() == f"Model file '{missing_path}' does not exist."
+
+
+def test_main_rejects_as_onnx_without_model(monkeypatch, capsys):
+    monkeypatch.setattr(
+        sightsee.argparse.ArgumentParser,
+        "parse_args",
+        lambda self: argparse.Namespace(
+            file=None,
+            browse=False,
+            port=None,
+            host=sightsee.AUTO_HOST,
+            verbosity=None,
+            as_onnx=True,
+            version=False,
+        ),
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        sightsee.main()
+
+    assert exc_info.value.code == 2
+    assert capsys.readouterr().out.strip() == "Option '--as-onnx' requires MODEL_FILE."
+
+
+def test_main_passes_onnx_identifier_override(tmp_path, write_test_model, monkeypatch, capsys):
+    model_path = write_test_model(tmp_path / "test_model.model")
+    calls = {}
+
+    def fake_start_model(file=None, address=None, browse=True, verbosity=None, identifier=None):
+        calls["file"] = file
+        calls["address"] = address
+        calls["browse"] = browse
+        calls["verbosity"] = verbosity
+        calls["identifier"] = identifier
+        return ("10.10.10.20", 8080)
+
+    monkeypatch.setattr(
+        sightsee.argparse.ArgumentParser,
+        "parse_args",
+        lambda self: argparse.Namespace(
+            file=model_path,
+            browse=True,
+            port=9000,
+            host="0.0.0.0",
+            verbosity="debug",
+            as_onnx=True,
+            version=False,
+        ),
+    )
+    monkeypatch.setattr(sightsee, "_start_model", fake_start_model)
+    monkeypatch.setattr(sightsee, "wait", lambda: None)
+
+    with pytest.raises(SystemExit) as exc_info:
+        sightsee.main()
+
+    assert exc_info.value.code == 0
+    assert calls == {
+        "file": model_path,
+        "address": ("0.0.0.0", 9000),
+        "browse": True,
+        "verbosity": "debug",
+        "identifier": "test_model.onnx",
+    }
+    assert capsys.readouterr().out.strip() == "Access URL: http://10.10.10.20:8080"
