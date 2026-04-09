@@ -435,7 +435,7 @@ def test_start_model_with_identifier_starts_custom_server(tmp_path, write_test_m
             file=model_path, address=("0.0.0.0", 0), browse=False, verbosity=None, identifier="model.onnx"
         )
     finally:
-        root_logger.handlers = original_handlers
+        root_logger.handlers[:] = original_handlers
 
     assert result == ("0.0.0.0", 7777)
     fake_thread.start.assert_called_once()
