@@ -14,6 +14,7 @@ from netron import server as netron_server
 from netron.server import __version__, start, wait
 
 AUTO_HOST = "auto"
+ONNX_COMPATIBLE_SUFFIXES = {".axmodel"}
 PREFERRED_INTERFACE_PREFIXES = ("eth", "en", "bond", "wlan", "wl", "wwan", "ethernet", "wi-fi", "wifi")
 DEPRIORITIZED_INTERFACE_MARKERS = (
     "br-",
@@ -154,6 +155,22 @@ def _build_onnx_identifier(file):
     return f"{stem or 'model'}.onnx"
 
 
+def _should_use_onnx_identifier(file, as_onnx=False):
+    return bool(as_onnx or (file and Path(file).suffix.lower() in ONNX_COMPATIBLE_SUFFIXES))
+
+
+class _AliasedContentProvider(netron_server._ContentProvider):
+    def __init__(self, path, identifier, name):
+        super().__init__(None, path, identifier, name)
+        self._real_base = self.base
+        self.base = os.path.basename(identifier)
+
+    def read(self, path):
+        if path == self.base:
+            path = self._real_base
+        return super().read(path)
+
+
 def _start_model(file=None, address=None, browse=True, verbosity=None, identifier=None):
     if identifier is None:
         start_kwargs = _build_start_kwargs(start, browse=browse, verbosity=verbosity)
@@ -165,8 +182,8 @@ def _start_model(file=None, address=None, browse=True, verbosity=None, identifie
     if file and not os.path.exists(file):
         raise FileNotFoundError(file)
 
-    # Keep the real path for file access, but override the identifier Netron uses for format matching.
-    content = netron_server._ContentProvider(None, file, identifier, file)
+    # Keep the real path for file access, but expose an ONNX-looking data URL for Netron format matching.
+    content = _AliasedContentProvider(file, identifier, file)
 
     address = netron_server._make_address(address)
     if isinstance(address[1], int) and address[1] != 0:
@@ -234,7 +251,7 @@ def main():
 
     resolved_host = _resolve_host(args.host)
     address = _build_address(host=resolved_host, port=args.port)
-    identifier = _build_onnx_identifier(args.file) if args.as_onnx and args.file else None
+    identifier = _build_onnx_identifier(args.file) if _should_use_onnx_identifier(args.file, args.as_onnx) else None
     final_address = _start_model(
         args.file,
         address=address,

@@ -47,6 +47,37 @@ def test_build_onnx_identifier_with_nested_path():
     assert sightsee._build_onnx_identifier("/a/b/c/deep_model.trt") == "deep_model.onnx"
 
 
+# --- _should_use_onnx_identifier ---
+
+
+def test_should_use_onnx_identifier_for_as_onnx():
+    assert sightsee._should_use_onnx_identifier("/tmp/model.plan", as_onnx=True) is True
+
+
+def test_should_use_onnx_identifier_for_axmodel_suffix():
+    assert sightsee._should_use_onnx_identifier("/tmp/model.axmodel") is True
+    assert sightsee._should_use_onnx_identifier("/tmp/model.AXMODEL") is True
+
+
+def test_should_not_use_onnx_identifier_for_regular_onnx_suffix():
+    assert sightsee._should_use_onnx_identifier("/tmp/model.onnx") is False
+
+
+# --- _AliasedContentProvider ---
+
+
+def test_aliased_content_provider_exposes_identifier_as_data_path(tmp_path):
+    model_path = tmp_path / "model.axmodel"
+    model_path.write_bytes(b"onnx-data")
+
+    content = sightsee._AliasedContentProvider(str(model_path), "model.onnx", str(model_path))
+
+    assert content.base == "model.onnx"
+    assert content.identifier == "model.onnx"
+    assert content.name == str(model_path)
+    assert content.read("model.onnx") == b"onnx-data"
+
+
 # --- _detect_default_host ---
 
 
