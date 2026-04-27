@@ -91,6 +91,56 @@ def test_detect_default_host_uses_udp_probe(monkeypatch):
     assert sightsee._detect_default_host() == "192.168.10.22"
 
 
+def test_list_interface_ipv4_hosts_uses_psutil(monkeypatch):
+    fake_psutil = unittest.mock.Mock()
+    fake_psutil.net_if_addrs.return_value = {
+        "lo": [unittest.mock.Mock(family=sightsee.socket.AF_INET, address="127.0.0.1")],
+        "Ethernet": [
+            unittest.mock.Mock(family=sightsee.socket.AF_INET, address="10.20.30.40"),
+            unittest.mock.Mock(family=sightsee.socket.AF_INET6, address="fe80::1"),
+        ],
+        "docker0": [unittest.mock.Mock(family=sightsee.socket.AF_INET, address="172.17.0.1")],
+        "Wi-Fi": [unittest.mock.Mock(family=sightsee.socket.AF_INET, address=" 192.168.1.9 ")],
+    }
+    fake_psutil.net_if_stats.return_value = {
+        "lo": unittest.mock.Mock(isup=True),
+        "Ethernet": unittest.mock.Mock(isup=True),
+        "docker0": unittest.mock.Mock(isup=False),
+        "Wi-Fi": unittest.mock.Mock(isup=True),
+    }
+    monkeypatch.setattr(sightsee, "psutil", fake_psutil)
+
+    assert sightsee._list_interface_ipv4_hosts() == [
+        ("Ethernet", "10.20.30.40"),
+        ("Wi-Fi", "192.168.1.9"),
+    ]
+
+
+def test_pick_interface_ipv4_prefers_physical_interface():
+    hosts = [
+        ("docker0", "172.17.0.1"),
+        ("tailscale0", "100.64.0.5"),
+        ("enp68s0", "10.20.30.40"),
+    ]
+    assert sightsee._pick_interface_ipv4(hosts) == "10.20.30.40"
+
+
+def test_detect_default_host_uses_interface_when_hostname_is_loopback(monkeypatch):
+    class BrokenSocket:
+        def connect(self, address):
+            raise PermissionError("denied")
+
+        def close(self):
+            pass
+
+    monkeypatch.delenv("SIGHTSEE_HOST", raising=False)
+    monkeypatch.setattr(sightsee.socket, "socket", lambda *args, **kwargs: BrokenSocket())
+    monkeypatch.setattr(sightsee, "_list_interface_ipv4_hosts", lambda: [("docker0", "172.17.0.1"), ("enp68s0", "10.5.5.5")])
+    monkeypatch.setattr(sightsee.socket, "gethostname", lambda: "server01")
+    monkeypatch.setattr(sightsee.socket, "gethostbyname", lambda hostname: "127.0.1.1")
+    assert sightsee._detect_default_host() == "10.5.5.5"
+
+
 def test_detect_default_host_falls_back_to_hostname(monkeypatch):
     class BrokenSocket:
         def connect(self, address):
@@ -101,6 +151,7 @@ def test_detect_default_host_falls_back_to_hostname(monkeypatch):
 
     monkeypatch.delenv("SIGHTSEE_HOST", raising=False)
     monkeypatch.setattr(sightsee.socket, "socket", lambda *args, **kwargs: BrokenSocket())
+    monkeypatch.setattr(sightsee, "_list_interface_ipv4_hosts", lambda: [])
     monkeypatch.setattr(sightsee.socket, "gethostname", lambda: "server01")
     monkeypatch.setattr(sightsee.socket, "gethostbyname", lambda hostname: "10.12.0.7")
     assert sightsee._detect_default_host() == "10.12.0.7"
@@ -116,6 +167,7 @@ def test_detect_default_host_returns_none_on_loopback(monkeypatch):
 
     monkeypatch.delenv("SIGHTSEE_HOST", raising=False)
     monkeypatch.setattr(sightsee.socket, "socket", lambda *args, **kwargs: BrokenSocket())
+    monkeypatch.setattr(sightsee, "_list_interface_ipv4_hosts", lambda: [])
     monkeypatch.setattr(sightsee.socket, "gethostname", lambda: "server01")
     monkeypatch.setattr(sightsee.socket, "gethostbyname", lambda hostname: "127.0.1.1")
     assert sightsee._detect_default_host() is None
@@ -133,6 +185,7 @@ def test_detect_default_host_returns_none_when_all_fail(monkeypatch):
 
     monkeypatch.delenv("SIGHTSEE_HOST", raising=False)
     monkeypatch.setattr(sightsee.socket, "socket", lambda *a, **kw: BrokenSocket())
+    monkeypatch.setattr(sightsee, "_list_interface_ipv4_hosts", lambda: [])
     monkeypatch.setattr(sightsee.socket, "gethostname", lambda: "host")
     def _raise_oserror(h):
         raise OSError("no dns")

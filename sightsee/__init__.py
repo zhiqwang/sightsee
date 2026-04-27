@@ -8,14 +8,84 @@ import time
 import webbrowser
 from pathlib import Path
 
+import psutil
+
 from netron import server as netron_server
 from netron.server import __version__, start, wait
 
 AUTO_HOST = "auto"
+PREFERRED_INTERFACE_PREFIXES = ("eth", "en", "bond", "wlan", "wl", "wwan", "ethernet", "wi-fi", "wifi")
+DEPRIORITIZED_INTERFACE_MARKERS = (
+    "br-",
+    "docker",
+    "virbr",
+    "veth",
+    "cni",
+    "flannel",
+    "cali",
+    "tailscale",
+    "zerotier",
+    "zt",
+    "wg",
+    "tun",
+    "tap",
+    "vboxnet",
+    "vmnet",
+    "vethernet",
+    "hyper-v",
+    "default switch",
+    "virtual",
+)
 
 
 def _is_usable_ipv4(host):
     return bool(host) and host not in {"0.0.0.0", "127.0.0.1"} and not host.startswith("127.")
+
+
+def _interface_is_up(stats):
+    return stats is None or getattr(stats, "isup", True)
+
+
+def _list_interface_ipv4_hosts():
+    try:
+        interface_addrs = psutil.net_if_addrs()
+    except OSError:
+        return []
+
+    try:
+        interface_stats = psutil.net_if_stats()
+    except OSError:
+        interface_stats = {}
+
+    hosts = []
+    for name, addrs in interface_addrs.items():
+        if not _interface_is_up(interface_stats.get(name)):
+            continue
+        for addr in addrs:
+            if addr.family != socket.AF_INET:
+                continue
+            host = addr.address.strip() if isinstance(addr.address, str) else addr.address
+            if _is_usable_ipv4(host):
+                hosts.append((name, host))
+
+    return hosts
+
+
+def _interface_priority(name):
+    lowered = name.lower()
+    if lowered == "lo":
+        return 100
+    if lowered.startswith(PREFERRED_INTERFACE_PREFIXES):
+        return 0
+    if any(marker in lowered for marker in DEPRIORITIZED_INTERFACE_MARKERS):
+        return 80
+    return 40
+
+
+def _pick_interface_ipv4(hosts):
+    if not hosts:
+        return None
+    return min(hosts, key=lambda item: (_interface_priority(item[0]), item[0], item[1]))[1]
 
 
 def _detect_default_host():
@@ -35,6 +105,10 @@ def _detect_default_host():
     finally:
         if sock is not None:
             sock.close()
+
+    interface_host = _pick_interface_ipv4(_list_interface_ipv4_hosts())
+    if interface_host:
+        return interface_host
 
     try:
         host = socket.gethostbyname(socket.gethostname())

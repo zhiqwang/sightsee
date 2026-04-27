@@ -33,8 +33,9 @@ tag matches the package version, then uploads `dist/` to Test PyPI and PyPI.
 
 ## Usage
 
-By default, Sightsee auto-detects the current server IPv4 address for binding. If detection fails, it falls back to
-Netron's localhost behavior. You can override this with `--host` or the `SIGHTSEE_HOST` environment variable.
+By default, Sightsee auto-detects the current server IPv4 address for binding by probing the active network interfaces.
+If detection fails, it falls back to Netron's localhost behavior. You can override this with `--host` or the
+`SIGHTSEE_HOST` environment variable.
 At startup, Sightsee prints a clear `Access URL:` line with the final address to open.
 
 ```bash
