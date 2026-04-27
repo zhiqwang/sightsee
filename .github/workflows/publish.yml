@@ -5,8 +5,6 @@ on:
   push:
     branches:
       - main
-    tags:
-      - "v*"
   release:
     types:
       - published
@@ -57,7 +55,7 @@ jobs:
         with:
           enable-cache: true
       - name: Verify release tag matches project version
-        if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'release'
+        if: github.event_name == 'release'
         env:
           GITHUB_REF_NAME: ${{ github.event.release.tag_name || github.ref_name }}
         run: |
@@ -82,7 +80,7 @@ jobs:
 
   publish:
     name: Publish to PyPI
-    if: startsWith(github.event.ref, 'refs/tags') || github.event_name == 'release'
+    if: github.event_name == 'release'
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -95,27 +93,13 @@ jobs:
           path: dist/
       - name: Validate publishing secrets
         env:
-          TEST_PYPI_API_TOKEN: ${{ secrets.TEST_PYPI_API_TOKEN }}
           PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: |
-          test -n "$TEST_PYPI_API_TOKEN" || {
-            echo "Missing GitHub secret: TEST_PYPI_API_TOKEN"
-            exit 1
-          }
           test -n "$PYPI_API_TOKEN" || {
             echo "Missing GitHub secret: PYPI_API_TOKEN"
             exit 1
           }
-      - name: Publish distribution 📦 to Test PyPI
-        if: startsWith(github.event.ref, 'refs/tags') || github.event_name == 'release'
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          user: __token__
-          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
-          repository-url: https://test.pypi.org/legacy/
-          verbose: true
       - name: Publish distribution 📦 to PyPI
-        if: startsWith(github.event.ref, 'refs/tags') || github.event_name == 'release'
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           user: __token__

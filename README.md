@@ -17,19 +17,18 @@ This repository publishes from GitHub Actions using PyPI API tokens.
 
 One-time setup:
 
-1. Create a project-scoped API token in Test PyPI and save it in this repository as `TEST_PYPI_API_TOKEN`.
-2. Create a project-scoped API token in PyPI and save it in this repository as `PYPI_API_TOKEN`.
-3. Keep the Git tag aligned with `[project].version` in `pyproject.toml`.
+1. Create a project-scoped API token in PyPI and save it in this repository as `PYPI_API_TOKEN`.
+2. Keep the Git tag aligned with `[project].version` in `pyproject.toml`.
 
 Release flow:
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git push origin main
 ```
 
-Pushing a `v*` tag, or publishing a GitHub release from a tag, runs tests, builds the wheel and sdist, checks that the
-tag matches the package version, then uploads `dist/` to Test PyPI and PyPI.
+Then create and publish a GitHub release using a `v*` tag. Publishing the release runs tests, builds the wheel and
+sdist, checks that the tag matches the package version, then uploads `dist/` to PyPI. For example, project version
+`0.4.0` must use release tag `v0.4.0`.
 
 ## Usage
 
